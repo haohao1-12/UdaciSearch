@@ -1,9 +1,10 @@
 package com.udacity.webcrawler;
 
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.PriorityQueue;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static java.util.stream.Collectors.toMap;
 
 /**
  * Utility class that sorts the map of word counts.
@@ -29,15 +30,28 @@ final class WordCounts {
 
     // TODO: Reimplement this method using only the Stream API and lambdas and/or method references.
 
-    PriorityQueue<Map.Entry<String, Integer>> sortedCounts =
-        new PriorityQueue<>(wordCounts.size(), new WordCountComparator());
-    sortedCounts.addAll(wordCounts.entrySet());
-    Map<String, Integer> topCounts = new LinkedHashMap<>();
-    for (int i = 0; i < Math.min(popularWordCount, wordCounts.size()); i++) {
-      Map.Entry<String, Integer> entry = sortedCounts.poll();
-      topCounts.put(entry.getKey(), entry.getValue());
-    }
-    return topCounts;
+//    PriorityQueue<Map.Entry<String, Integer>> sortedCounts =
+//        new PriorityQueue<>(wordCounts.size(), new WordCountComparator());
+//    sortedCounts.addAll(wordCounts.entrySet());
+//    Map<String, Integer> topCounts = new LinkedHashMap<>();
+//    for (int i = 0; i < Math.min(popularWordCount, wordCounts.size()); i++) {
+//      Map.Entry<String, Integer> entry = sortedCounts.poll();
+//      topCounts.put(entry.getKey(), entry.getValue());
+//    }
+//    return topCounts;
+
+    // Stream API version
+    Stream<Map.Entry<String, Integer>> stream = wordCounts.entrySet().stream();
+    return stream
+            .sorted(new WordCountComparator())
+            .limit(popularWordCount)
+            .collect(Collectors.toMap(
+                    Map.Entry::getKey, // The datatype of the element enclosed by entrySet is Map.Entry<K, V>
+                    Map.Entry::getValue,
+                    (s1, s2) -> s1,
+                    LinkedHashMap::new
+            ));
+
   }
 
   /**
@@ -54,12 +68,12 @@ final class WordCounts {
     @Override
     public int compare(Map.Entry<String, Integer> a, Map.Entry<String, Integer> b) {
       if (!a.getValue().equals(b.getValue())) {
-        return b.getValue() - a.getValue();
+        return b.getValue() - a.getValue(); // descending order
       }
       if (a.getKey().length() != b.getKey().length()) {
         return b.getKey().length() - a.getKey().length();
       }
-      return a.getKey().compareTo(b.getKey());
+      return a.getKey().compareTo(b.getKey()); // ascending order
     }
   }
 
