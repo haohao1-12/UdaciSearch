@@ -50,6 +50,7 @@ final class SequentialWebCrawler implements WebCrawler {
     Set<String> visitedUrls = new HashSet<>();
     for (String url : startingUrls) {
       crawlInternal(url, deadline, maxDepth, counts, visitedUrls);
+      // This is the core processing part which actually implement the crawl function
     }
 
     if (counts.isEmpty()) {
@@ -72,18 +73,19 @@ final class SequentialWebCrawler implements WebCrawler {
       Map<String, Integer> counts,
       Set<String> visitedUrls) {
     if (maxDepth == 0 || clock.instant().isAfter(deadline)) {
-      return;
+      return; // terminal condition
     }
     for (Pattern pattern : ignoredUrls) {
       if (pattern.matcher(url).matches()) {
-        return;
+        return; // terminal condition
       }
     }
     if (visitedUrls.contains(url)) {
-      return;
+      return; // terminal condition
     }
     visitedUrls.add(url);
     PageParser.Result result = parserFactory.get(url).parse();
+    // The parse method process the html page and returns a PageParser result for the page
     for (Map.Entry<String, Integer> e : result.getWordCounts().entrySet()) {
       if (counts.containsKey(e.getKey())) {
         counts.put(e.getKey(), e.getValue() + counts.get(e.getKey()));
