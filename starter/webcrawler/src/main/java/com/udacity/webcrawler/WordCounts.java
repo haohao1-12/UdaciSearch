@@ -4,8 +4,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static java.util.stream.Collectors.toMap;
-
 /**
  * Utility class that sorts the map of word counts.
  *

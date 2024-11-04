@@ -38,9 +38,9 @@ public final class WebCrawlerMain {
     CrawlResultWriter resultWriter = new CrawlResultWriter(result);
     // TODO: Write the crawl results to a JSON file (or System.out if the file name is empty)
     // TODO: Write the profile data to a text file (or System.out if the file name is empty)
-    if (config.getResultPath() != "") {
+    if (!config.getResultPath().isEmpty()) {
       String path = config.getResultPath();
-      new CrawlResultWriter(result).write(Path.of(path));
+      resultWriter.write(Path.of(path));
       return;
     }
     System.out.println(result.getUrlsVisited());
