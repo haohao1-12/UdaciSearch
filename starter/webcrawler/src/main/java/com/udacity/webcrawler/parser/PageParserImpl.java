@@ -73,7 +73,7 @@ final class PageParserImpl implements PageParser {
     } catch (Exception e) {
       // There are multiple exceptions that can be encountered due to invalid URIs or Mimetypes that
       // Jsoup does not handle. There is not much we can do here.
-      e.printStackTrace();
+//      e.printStackTrace();
       return new Result.Builder().build();
     }
 

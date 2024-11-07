@@ -30,6 +30,7 @@ final class ParallelWebCrawler implements WebCrawler {
   private final List<Pattern> ignoredUrls;
   private final int maxDepth;
 
+
   @Inject
   ParallelWebCrawler(
           Clock clock,
@@ -45,7 +46,9 @@ final class ParallelWebCrawler implements WebCrawler {
     this.parserFactory = Objects.requireNonNull(parserFactory);
     this.ignoredUrls = Objects.requireNonNull(ignoredUrls);
     this.maxDepth = maxDepth;
+
   }
+
 
   @Override
   public CrawlResult crawl(List<String> startingUrls) {
@@ -53,9 +56,18 @@ final class ParallelWebCrawler implements WebCrawler {
     Map<String, Integer> counts = new ConcurrentHashMap<>();
     Set<String> visitedUrls = new ConcurrentSkipListSet<>();
 
+
     for (String url : startingUrls) {
-//      crawlInternal(url, deadline, maxDepth, counts, visitedUrls);
-      pool.invoke(new CrawlTask(url, deadline, maxDepth, counts, visitedUrls, ignoredUrls, parserFactory, clock));
+      pool.invoke(new crawlInternalAction.Builder()
+              .setParserFactory(parserFactory)
+              .setUrl(url)
+              .setClock(clock)
+              .setMaxDepth(maxDepth)
+              .setVisitedUrls(visitedUrls)
+              .setCounts(counts)
+              .setDeadline(deadline)
+              .setIgnoredUrls(ignoredUrls)
+              .build());
     }
 
     if (counts.isEmpty()) {
@@ -71,72 +83,9 @@ final class ParallelWebCrawler implements WebCrawler {
             .build();
   }
 
+
   @Override
   public int getMaxParallelism() {
     return Runtime.getRuntime().availableProcessors();
   }
-
-  final class CrawlTask extends RecursiveAction {
-    String url;
-    Instant deadline;
-    int maxDepth;
-    Map<String, Integer> counts;
-    Set<String> visitedUrls;
-    List<Pattern> ignoredUrls;
-    PageParserFactory parserFactory;
-    Clock clock;
-
-    @Inject
-    public CrawlTask(
-            String url,
-            Instant deadline,
-            int maxDepth,
-            Map<String, Integer> counts,
-            Set<String> visitedUrls,
-            List<Pattern> ignoredUrls,
-            PageParserFactory parserFactory,
-            Clock clock
-            ) {
-      this.url = url;
-      this.deadline = deadline;
-      this.maxDepth = maxDepth;
-      this.counts = counts;
-      this.visitedUrls = visitedUrls;
-      this.ignoredUrls = ignoredUrls;
-      this.parserFactory = parserFactory;
-      this.clock = clock;
-    }
-
-
-
-    @Override
-    protected void compute() {
-      if (maxDepth == 0 || clock.instant().isAfter(deadline)) {
-        return;
-      }
-      for (Pattern pattern : ignoredUrls) {
-        if (pattern.matcher(url).matches()) {
-          return;
-        }
-      }
-      if (visitedUrls.contains(url)) {
-        return;
-      }
-      visitedUrls.add(url);
-      PageParser.Result result = parserFactory.get(url).parse();
-
-      for (Map.Entry<String, Integer> e : result.getWordCounts().entrySet()) {
-        if (counts.containsKey(e.getKey())) {
-          counts.put(e.getKey(), e.getValue() + counts.get(e.getKey()));
-        } else {
-          counts.put(e.getKey(), e.getValue());
-        }
-      }
-      for (String link : result.getLinks()) {
-        invokeAll(new CrawlTask(link, deadline, maxDepth-1, counts, visitedUrls, ignoredUrls,
-                parserFactory, clock));
-      }
-    }
-  }
-
 }
