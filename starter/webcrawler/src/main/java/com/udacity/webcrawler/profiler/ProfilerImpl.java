@@ -1,11 +1,18 @@
 package com.udacity.webcrawler.profiler;
 
 import javax.inject.Inject;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.Writer;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.time.Clock;
 import java.time.ZonedDateTime;
+import java.util.List;
 import java.util.Objects;
 
 import static java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME;
@@ -25,21 +32,45 @@ final class ProfilerImpl implements Profiler {
     this.startTime = ZonedDateTime.now(clock);
   }
 
+  private boolean hasProfiled(Class<?> klass) {
+    if (klass.getMethods().length == 0) {
+      return false;
+    }
+    Method[] methods = klass.getMethods();
+    for (Method method : methods) {
+      if (method.getDeclaredAnnotation(Profiled.class) != null) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   @Override
-  public <T> T wrap(Class<T> klass, T delegate) {
+  public <T> T wrap(Class<T> klass, T delegate){
     Objects.requireNonNull(klass);
 
     // TODO: Use a dynamic proxy (java.lang.reflect.Proxy) to "wrap" the delegate in a
     //       ProfilingMethodInterceptor and return a dynamic proxy from this method.
     //       See https://docs.oracle.com/javase/10/docs/api/java/lang/reflect/Proxy.html.
 
-    return delegate;
+    if (!hasProfiled(klass)) {
+      throw new IllegalArgumentException("Class " + klass.getName() + " has no profiled method");
+    }
+    Object proxy = Proxy.newProxyInstance(
+            klass.getClassLoader(),
+            delegate.getClass().getInterfaces(),
+            new ProfilingMethodInterceptor(delegate, clock, state)
+    );
+    return (T) proxy;
   }
 
   @Override
-  public void writeData(Path path) {
+  public void writeData(Path path) throws IOException {
     // TODO: Write the ProfilingState data to the given file path. If a file already exists at that
     //       path, the new data should be appended to the existing file.
+    try (BufferedWriter writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8, StandardOpenOption.CREATE)){
+      writeData(writer);
+    }
   }
 
   @Override
