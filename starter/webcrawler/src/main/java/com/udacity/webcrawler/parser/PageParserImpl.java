@@ -122,8 +122,8 @@ final class PageParserImpl implements PageParser {
    * refer to a local document or a remote web page.
    */
   private Document parseDocument(URI uri) throws IOException {
-    System.setProperty("https.proxyHost", "127.0.0.1");
-    System.setProperty("https.proxyPort", "10800");
+//    System.setProperty("https.proxyHost", "127.0.0.1");
+//    System.setProperty("https.proxyPort", "10800");
     if (!isLocalFile(uri)) {
       return Jsoup.parse(uri.toURL(), (int) timeout.toMillis());
     }
