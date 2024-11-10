@@ -5,9 +5,9 @@
     "https://openlibrary.org/people.*"
   ],
   "ignoredWords": ["^.{1,3}$"],
-  "parallelism": 10,
-  "maxDepth": 2,
-  "timeoutSeconds": 10,
+  "parallelism": 6,
+  "maxDepth": 4,
+  "timeoutSeconds": 20,
   "popularWordCount": 5,
   "profileOutputPath": "profileData.txt"
 }

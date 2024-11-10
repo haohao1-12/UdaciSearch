@@ -33,6 +33,7 @@ final class ProfilingMethodInterceptor implements InvocationHandler {
     //       ProfilingState methods.
 
       Instant start = clock.instant();
+      String threadId = Long.toString(Thread.currentThread().getId());
       try {
           return method.invoke(object, args);
       } catch (InvocationTargetException e) {
@@ -42,7 +43,7 @@ final class ProfilingMethodInterceptor implements InvocationHandler {
       } finally {
         if (method.getAnnotation(Profiled.class) != null) {
           Duration duration = Duration.between(start, clock.instant());
-          state.record(object.getClass(), method, duration);
+          state.record(object.getClass(), method, duration, threadId);
       }
     }
 

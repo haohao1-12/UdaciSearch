@@ -4,10 +4,9 @@ import java.io.IOException;
 import java.io.Writer;
 import java.lang.reflect.Method;
 import java.time.Duration;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.stream.Collectors;
 
 /**
@@ -15,6 +14,8 @@ import java.util.stream.Collectors;
  */
 final class ProfilingState {
   private final Map<String, Duration> data = new ConcurrentHashMap<>();
+  private final Map<String, String> threads = new ConcurrentHashMap<>();
+  private final Map<String, Integer> freq = new ConcurrentHashMap<>();
 
   /**
    * Records the given method invocation data.
@@ -23,15 +24,18 @@ final class ProfilingState {
    * @param method       the method that was called.
    * @param elapsed      the amount of time that passed while the method was called.
    */
-  void record(Class<?> callingClass, Method method, Duration elapsed) {
+  void record(Class<?> callingClass, Method method, Duration elapsed, String threadId) {
     Objects.requireNonNull(callingClass);
     Objects.requireNonNull(method);
     Objects.requireNonNull(elapsed);
+    Objects.requireNonNull(threadId);
     if (elapsed.isNegative()) {
       throw new IllegalArgumentException("negative elapsed time");
     }
     String key = formatMethodCall(callingClass, method);
     data.compute(key, (k, v) -> (v == null) ? elapsed : v.plus(elapsed));
+    freq.compute(key, (k, v) -> (v == null) ? 1 : v + 1);
+    threads.compute(key, (k, v) -> (v == null) ? threadId : v + " " + threadId);
   }
 
   /**
@@ -50,9 +54,31 @@ final class ProfilingState {
             .map(e -> e.getKey() + " took " + formatDuration(e.getValue()) + System.lineSeparator())
             .collect(Collectors.toList());
 
+    List<String> entries_thread =
+            threads.entrySet()
+                    .stream()
+                    .sorted(Map.Entry.comparingByKey())
+                    .map(e -> e.getKey() + " executed on threads " + e.getValue() + System.lineSeparator())
+                    .collect(Collectors.toList());
+
+    List<String> entries_freq =
+            freq.entrySet()
+                    .stream()
+                    .sorted(Map.Entry.comparingByKey())
+                    .map(e -> e.getKey() + " was executed for " + e.getValue() + " times " + System.lineSeparator())
+                    .collect(Collectors.toList());
+
+
+
     // We have to use a for-loop here instead of a Stream API method because Writer#write() can
     // throw an IOException, and lambdas are not allowed to throw checked exceptions.
     for (String entry : entries) {
+      writer.write(entry);
+    }
+    for (String entry : entries_thread) {
+      writer.write(entry);
+    }
+    for (String entry : entries_freq) {
       writer.write(entry);
     }
   }
