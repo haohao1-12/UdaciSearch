@@ -6,6 +6,7 @@ import com.udacity.webcrawler.parser.PageParserFactory;
 import javax.inject.Inject;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -98,21 +99,20 @@ public final class crawlInternalAction extends RecursiveAction {
                 return;
             }
         }
-        if (visitedUrls.contains(url)) {
+        if (!visitedUrls.add(url)) {
             return;
         }
-        visitedUrls.add(url);
         PageParser.Result result = parserFactory.get(url).parse();
 
         for (Map.Entry<String, Integer> e : result.getWordCounts().entrySet()) {
-            if (counts.containsKey(e.getKey())) {
-                counts.put(e.getKey(), e.getValue() + counts.get(e.getKey()));
-            } else {
-                counts.put(e.getKey(), e.getValue());
-            }
+            counts.merge(e.getKey(), e.getValue(), Integer::sum);
         }
+
+        List<crawlInternalAction> actions = new ArrayList<>();
+
         for (String link : result.getLinks()) {
-            invokeAll(new crawlInternalAction(link, deadline, maxDepth-1, counts, visitedUrls, clock, ignoredUrls, parserFactory));
+            actions.add(new crawlInternalAction(link, deadline, maxDepth-1, counts, visitedUrls, clock, ignoredUrls, parserFactory));
         }
+        invokeAll(actions);
     }
 }
